@@ -19,23 +19,27 @@ typedef std::shared_ptr<RadarArcs> RadarArcsRef;
 typedef std::shared_ptr<Arc> ArcRef;
 
 
+
 class Arc{
 public:
 	~Arc(){}
-	Arc(int idKPI){
-		this->idKPI = idKPI;
+	Arc(int idKPI, glm::vec2 center, int numKpis, int numBlocks){
+		this->idKPI  = idKPI;
+		this->center = center;
+		this->numKpis   = numKpis;
+		this->numBlocks = numBlocks;
 	}
 	
 	//create memory
-	static ArcRef create(int kpis) {
-		return std::make_shared<Arc>(kpis);
+	static ArcRef create(int kpis, glm::vec2 center, int numKpis, int numBlocks) {
+		return std::make_shared<Arc>(kpis, center, numKpis, numBlocks);
 	}
 	
-	void createArc(float startArc, int numKpis){
+	void createArc(float startArc){
 		float endCicle 	= startArc*4.0;
-		float circleStep = (endCicle - startArc)/(float)numBlocks;
+		circleStep = (endCicle - startArc)/(float)numBlocks;
 		float radStart =  ofDegToRad(270);
-		mCenter = glm::vec2(ofGetWidth()/2.0, ofGetHeight()/2.0);
+		
 		
 		//block increments
 		for(int j = 0; j < numBlocks; j++){
@@ -49,8 +53,8 @@ public:
 			float stepArcCurr = (TWO_PI/numKpis) * idKPI +radStart;
 			float stepArcNext = (TWO_PI/numKpis) * (idKPI + 1) + radStart;
 			
-			auto arcPointsInner = computeArcSegment(mCenter, currCircle + 1, stepArcCurr + div, stepArcNext - div, 25);
-			auto arcPointsOuter = computeArcSegment(mCenter, nextCircle - 1, stepArcNext - div, stepArcCurr + div , 25);
+			auto arcPointsInner = computeArcSegment(center, currCircle + 1, stepArcCurr + div, stepArcNext - div, 25);
+			auto arcPointsOuter = computeArcSegment(center, nextCircle - 1, stepArcNext - div, stepArcCurr + div , 25);
 		
 			for (const auto &pt : arcPointsInner) {
 				arcp.lineTo(pt.x, pt.y);
@@ -82,9 +86,8 @@ public:
 			float stepArcCurr = (TWO_PI/numKpis) * idKPI + radStart;
 			float stepArcNext = (TWO_PI/numKpis) * (idKPI + 1) + radStart;
 			
-			auto arcPointsInner = computeArcSegment(mCenter, currCircle + 1, stepArcCurr + div, stepArcNext - div, 25);
-			auto arcPointsOuter = computeArcSegment(mCenter, nextCircle - 1, stepArcNext - div, stepArcCurr + div , 25);
-			
+			auto arcPointsInner = computeArcSegment(center, currCircle + 1, stepArcCurr + div, stepArcNext - div, 25);
+			auto arcPointsOuter = computeArcSegment(center, nextCircle - 1, stepArcNext - div, stepArcCurr + div , 25);
 			
 			for (const auto &pt : arcPointsInner) {
 				arcp.lineTo(pt.x, pt.y);
@@ -117,9 +120,8 @@ public:
 			float stepArcCurr = (TWO_PI/numKpis) * idKPI + radStart;
 			float stepArcNext = (TWO_PI/numKpis) * (idKPI + 1) + radStart;
 			
-			auto arcPointsInner = computeArcSegment(mCenter, currCircle + 1, stepArcCurr + div, stepArcNext - div, 25);
-			auto arcPointsOuter = computeArcSegment(mCenter, nextCircle - 1, stepArcNext - div, stepArcCurr + div , 25);
-			
+			auto arcPointsInner = computeArcSegment(center, currCircle + 1, stepArcCurr + div, stepArcNext - div, 25);
+			auto arcPointsOuter = computeArcSegment(center, nextCircle - 1, stepArcNext - div, stepArcCurr + div , 25);
 			
 			for (const auto &pt : arcPointsInner) {
 				arcp.lineTo(pt.x, pt.y);
@@ -130,7 +132,7 @@ public:
 			}
 			
 			float alpha =  0.25 + (idKPI/(float)numKpis)*0.75;
-			ofFloatColor mColor = ofFloatColor( (idKPI/6.0)*0.25 + 0.20, 0.75, alpha);
+			ofFloatColor mColor = ofFloatColor( (idKPI/6.0)*0.25 + 0.20, 0.75, 0.0, alpha);
 			
 			arcp.setFilled(true);
 			arcp.setColor(mColor);
@@ -154,6 +156,36 @@ public:
 		arcEnd.draw();
 	}
 	
+	void drawLabel(std::string str1, std::string str2, ofTrueTypeFont radarFont, ofTrueTypeFont numFont){
+		float offSet = ofDegToRad(272);
+		float ioffSet = ofDegToRad(267);
+		float offInc = 0.007;
+		
+		float rad   =  (numBlocks + 4.12) * circleStep ;
+		float irad  =  (numBlocks + 3.95) * circleStep ;
+		
+		float step = (idKPI/(float)numKpis + offInc)*TWO_PI;
+		
+		float x = rad*cos(step + offSet) + center.x;
+		float y = rad*sin(step + offSet) + center.y;
+		
+		float ix = irad*cos(step + ioffSet) + center.x;
+		float iy = irad*sin(step + ioffSet) + center.y;
+		
+		float xdir = std::copysign(1.0f, cos(step + offSet));
+		
+		numFont.drawString(ofToString(idKPI), ix, iy);
+		
+		if(xdir == -1){
+			radarFont.setDirection(OF_TTF_RIGHT_TO_LEFT);
+			radarFont.drawString(str2, x, y);
+		}else{
+			radarFont.setDirection(OF_TTF_LEFT_TO_RIGHT);
+			radarFont.drawString(str1, x, y);
+		}
+		
+	}
+	
 	std::vector<glm::vec2> computeArcSegment(const glm::vec2 &center, float radius, float startAngle, float endAngle, int numPoints){
 		std::vector<glm::vec2> arcPoints;
 		float angleStep = (endAngle - startAngle) / (numPoints - 1);
@@ -170,44 +202,132 @@ public:
 	ofPath				arcOuter;
 	ofPath				arcEnd;
 	
-	glm::vec2  mCenter;
+	float circleStep;
+	
+	glm::vec2 center;
+	
 	float idKPI;
+	
+	int numKpis;
+	int numBlocks;
+	
 	float value;
-	float numBlocks;
 	ofColor mBasedColor;
 };
 
 class RadarArcs{
 public:
-	RadarArcs(int startRad, int numKPIs){
+	RadarArcs(int startRad, glm::vec2 center, int numKPIs, int numBlocks){
 		this->startRad = startRad;
 		this->numKPIs = numKPIs;
+		this->numBlocks =  numBlocks;
+		this->mCenter	= center;
+		
+		radarFont.load("verdana.ttf", 18);
+		numFont.load("verdana.ttf", 11);
 	}
 	
 	~RadarArcs(){
 	}
 	
 	//create memory
-	static RadarArcsRef create(int startRad, int numKPIs) {
-		return std::make_shared<RadarArcs>(startRad, numKPIs);
+	static RadarArcsRef create(int startRad, glm::vec2 center, int numKPIs, int numBlocks) {
+		return std::make_shared<RadarArcs>(startRad, center, numKPIs, numBlocks);
 		
 	}
 	
-	void createArcs(float numKPIs, float numBlocks){
-	
+	void createArcs(){
 		for(int i = 0; i < numKPIs; i++){
-			ArcRef ar  = Arc::create(i);
-			ar->createArc(startRad, numKPIs);
+			ArcRef ar  = Arc::create(i, mCenter, numKPIs, numBlocks);
+			ar->createArc(startRad);
 			mArcs.push_back(ar);
 		}
 	}
 	
+	void createLabels(){
+		std::vector<std::string> tlabel = {
+			"PRICE\nAFFORDABILITY",
+			"RENTAL\nAFFORDABILITY",
+			"WAGE\nACCESIBILITY",
+			"HOMEOWNERSHIP\nOPPORTUNITY INDEX",
+			"FAIR RENTAL\nOPPORTUNITY INDEX",
+			"AFFORDABLE HOUSING\nSUPPORT INDEX",
+			"ACCESSIBILITY &\nCOVERAGE",
+			"PARKS &\nGREEN SPACES",
+			"COMMUNITY &\nSOCIAL INTERACTION",
+			"PUBLIC SCHOOLS &\nEDUCATION FACILITIES",
+			"COMMUNITY SERVICES &\nCULTURAL SPACES",
+			"ECONOMIC &\nJOB OPPORTUNITIES",
+			"& SUSTAINABLE \nSPACES PUBLIC SMART",
+			"& AFFORDABILITY \n EQUITY",
+			"AVERAGE\nTIME WAIT",
+			"TRANSPORT PUBLIC\nCOVERAGE",
+			"OVERCROWDING\nBUSES OF",
+			"OF FREQUENCY\n BUSES",
+			"MILES PER MODE",
+			"MODE SHARE",
+			"COMMUNITY\nINDEX STABILITY",
+			"HOUSING HEALTHY\nRATE VACANCY ",
+			"AVAILABILITY\nINDEX",
+			"COST\nEFFICIENCY"
+		};
+		
+		label = tlabel;
+		
+		// New vector to store the processed (word-reversed) strings.
+		labelReverse.reserve(label.size()); // Reserve space for efficiency.
+		
+		// Process each string in the original vector.
+		for (const auto &line : label) {
+			// Use an istringstream to handle possible newline characters.
+			std::istringstream iss(line);
+			std::string segment;
+			std::string processedString;
+			bool firstSegment = true;
+			// Process each segment separated by newline.
+			while(std::getline(iss, segment, '\n')) {
+				if (!firstSegment)
+					processedString += "\n"; // Preserve the newline separator.
+				
+				// Now process this segment by reversing each word.
+				std::istringstream wordStream(segment);
+				std::string word;
+				std::string processedSegment;
+				bool firstWord = true;
+				while (wordStream >> word) {
+					if (!firstWord)
+						processedSegment += " ";
+					std::reverse(word.begin(), word.end());
+					processedSegment += word;
+					firstWord = false;
+				}
+				processedString += processedSegment;
+				firstSegment = false;
+			}
+			// Add the processed string to the new vector.
+			labelReverse.push_back(processedString);
+		}
+	}
+	
 	void draw(){
+		
+		float rad = startRad*0.85;
+		ofFill();
+		ofSetColor(230, 200);
+		ofDrawCircle(mCenter.x, mCenter.y, rad);
+			
 		for(const auto & arcs : mArcs){
 			arcs->drawIncArcs();
 			arcs->drawOuterdArc();
 			arcs->drawEndArc();
 		}
+		
+		int i=0;
+		for(const auto & arcs : mArcs){
+			arcs->drawLabel(label[i], labelReverse[i], radarFont, numFont);
+			i++;
+		}
+		
 	}
 	
 	void updateArc(int i, float amt){
@@ -221,6 +341,12 @@ public:
 	float numBlocks;
 	
 	float startRad;
-
+	glm::vec2  mCenter;
 	
+	//labels
+	ofTrueTypeFont radarFont;
+	ofTrueTypeFont numFont;
+	
+	std::vector<std::string> label;
+	std::vector<std::string> labelReverse;
 };

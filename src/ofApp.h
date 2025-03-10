@@ -30,8 +30,7 @@ class ofApp : public ofBaseApp{
 		float mx;
 		float my;
 	
-		ofTrueTypeFont radarFont;
-		ofTrueTypeFont numFont;
+
 	
 		void loadRadarTxt();
 	
